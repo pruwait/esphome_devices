@@ -1,0 +1,123 @@
+ #https://github.com/RocketFox2409/MercuryESPHome
+
+
+esphome:
+  name: mercury200-02
+  platform: ESP8266
+  board: nodemcuv2
+  includes:
+    - mercury/mercury-200.02.h #Указываем свой путь до файла
+    
+# Enable logging
+logger:
+  level: VERY_VERBOSE
+  baud_rate: 0
+  
+  
+# Enable Home Assistant API
+api:
+
+ota:
+
+# Set statul led for Wemos D1 mini
+status_led:
+  pin: GPIO2
+
+wifi:
+  ssid: "JNET2G"
+  password: "9529875599d"
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Mercury200-02 Fallback Hotspot"
+    password: "88888888"
+
+captive_portal:
+
+
+# Enable web server (can be disabled)
+web_server:
+  port: 80
+
+#time:
+#  - platform: sntp
+#    id: sntp_time
+#    timezone: "Europe/Moscow"
+
+
+#------------
+
+uart:
+  id: uart_bus
+  tx_pin: GPIO1
+  rx_pin: GPIO3
+  baud_rate: 9600
+  
+  
+
+sensor:
+
+
+  - platform: template
+    id: Volts
+    name: "${friendly_name} Volts"
+    icon: "mdi:alpha-v-circle-outline"
+    unit_of_measurement: "V"
+    accuracy_decimals: 1
+    lambda: "return {};"
+
+  - platform: template
+    id: Amps
+    name: "${friendly_name} Amps"
+    icon: "mdi:alpha-a-circle-outline"
+    unit_of_measurement: "A"
+    accuracy_decimals: 2
+    lambda: "return {};"
+
+  - platform: template
+    id: Watts
+    name: "${friendly_name} Watts"
+    icon: "mdi:alpha-p-circle-outline"
+    unit_of_measurement: "KWt*H"
+    accuracy_decimals: 3
+    lambda: "return {};"
+
+  - platform: template
+    id: Tariff1
+    name: "${friendly_name} Tariff1"
+    icon: "mdi:counter"
+    unit_of_measurement: "KWt"
+    accuracy_decimals: 2
+    lambda: "return {};"
+
+  - platform: template
+    id: Tariff2
+    name: "${friendly_name} Tariff2"
+    icon: "mdi:counter"
+    unit_of_measurement: "KWt"
+    accuracy_decimals: 2
+    lambda: "return {};"
+
+  - platform: template
+    id: Tariff3
+    name: "${friendly_name} Tariff3"
+    icon: "mdi:counter"
+    unit_of_measurement: "KWt"
+    accuracy_decimals: 2
+    lambda: "return {};"
+
+  - platform: template
+    id: Sum_Tariff
+    name: "${friendly_name} Sum_Tariff"
+    icon: "mdi:counter"
+    unit_of_measurement: "KWt"
+    accuracy_decimals: 2
+    lambda: "return {};"
+
+
+custom_component: 
+
+  - lambda: |-
+      auto my_mercury = new Mercury(id(uart_bus), id(Volts), id(Amps), id(Watts), id(Tariff1), id(Tariff2), id(Tariff3), id(Sum_Tariff));
+      App.register_component(my_mercury);
+      return {my_mercury};
