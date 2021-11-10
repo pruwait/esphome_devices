@@ -1,0 +1,59 @@
+#https://github.com/Oksion/esphaier
+esphome:
+  name: haier-as09tl4hra-bedroom
+  platform: ESP8266
+  board: d1_mini
+  includes:
+    - Haier.h
+
+
+
+# Enable Home Assistant API
+api:
+
+ota:
+
+# Set statul led for Wemos D1 mini
+status_led:
+  pin: GPIO2
+
+
+wifi:
+  ssid: "mynet"
+  password: "mypass"
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Haier-As09Tl4Hra-Bedroom"
+    password: "VvI77GgztKDh"
+
+captive_portal:
+
+
+
+
+
+
+# Enable web server (can be disabled)
+web_server:
+  port: 80
+
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: "Europe/Moscow"
+
+# Enable logging
+logger:
+  level: DEBUG
+  baud_rate: 0 #Important. You can't use serial port
+
+
+climate:
+  - platform: custom
+    lambda: |-
+      auto haier = new Haier();
+      App.register_component(haier);
+      return {haier};
+    climates:
+      - name: "Haier"
