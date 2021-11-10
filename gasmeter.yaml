@@ -1,0 +1,76 @@
+# снятие показаний со счетчика через датчик импульсов IN-Z61
+#коричневый ------------ GND
+#зеленый    --+-- 10k -- VCC
+#.            |
+#.            +--------- GPIO14 ESP8266
+
+
+
+esphome:
+  name: gas-bk-g4t
+  platform: ESP8266
+  board: nodemcuv2
+
+# Enable logging
+logger:
+
+
+
+# Enable Home Assistant API
+api:
+
+ota:
+
+# Set statul led for Wemos D1 mini
+status_led:
+  pin: GPIO2
+
+wifi:
+  ssid: "mynet"
+  password: "mypass"
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "GAS-BK-G4T Fallback Hotspot"
+    password: "88888888"
+
+captive_portal:
+
+
+# Enable web server (can be disabled)
+web_server:
+  port: 80
+
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO14
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    name: Gerkon
+
+sensor:
+  - platform: pulse_counter
+    pin: 
+      number: GPIO14
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    name: Pulse meter
+    internal_filter: 100us
+    filters:
+      - debounce: 5s
+
+    unit_of_measurement: "pulse/min"
+    icon: 'mdi:fire'
+
+    total:
+      unit_of_measurement: 'm³'
+      name: Gas Volume
+      accuracy_decimals: 2
+      filters:
+        - multiply: 0.01  # (1000 pulses per kWh)
