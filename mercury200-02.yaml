@@ -24,8 +24,8 @@ status_led:
   pin: GPIO2
 
 wifi:
-  ssid: "JNET2G"
-  password: "9529875599d"
+  ssid: "mynet"
+  password: "mypass"
 
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
