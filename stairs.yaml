@@ -1,0 +1,163 @@
+#   Контроллер подсветки ступенек лестницы
+#   Железо:
+#   Контроллер WT32-ETH01
+#   74AHCT125N (хуже 74HCT125N)
+#   APA102
+#
+#
+#
+
+
+esphome:
+  name: stairs
+  platform: ESP32
+  board: esp-wrover-kit
+
+ethernet:
+  type: LAN8720
+  mdc_pin: GPIO23
+  mdio_pin: GPIO18
+  clk_mode: GPIO0_IN
+  phy_addr: 1
+  power_pin: GPIO16
+
+
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+
+ota:
+
+web_server:
+  port: 80
+
+globals:
+  - id: gStepFirstLed
+    type: int[19]
+    restore_value: no
+    initial_value: '{ 0, 60, 120, 180, 240, 300, 360, 420, 480, 540, 600, 660, 720, 780, 840, 900, 960, 1020, 1080 }'
+  - id: gStepLastLed
+    type: int[19]
+    restore_value: no
+    initial_value: '{ 59, 119, 179, 239, 299, 359, 419, 479, 539, 599, 659, 719, 779, 839, 899, 959, 1019, 1079, 1139 }'
+    
+light:
+  - platform: fastled_spi
+    chipset: APA102
+    data_pin: GPIO17
+    clock_pin: GPIO5
+    rgb_order: BGR
+    num_leds: 1140
+    name: "StairLight"
+    id: staircase
+    data_rate: 200kHz #длинные ленты не работают на большой частоте!
+    effects:
+      - addressable_lambda:
+          name: "Steps down to up"
+          update_interval: 400ms
+          lambda: |-
+            static uint16_t stepsCount = 0;
+            static uint16_t i = 0;
+            static uint16_t run = 0;
+            
+            if (initial_run)
+            {
+            //Определяем количество ступеней
+              stepsCount = sizeof(id(gStepFirstLed)) / sizeof(id(gStepFirstLed)[0]);
+              i = 0;
+              run = 0;
+              it.all() = Color::BLACK; //гасим ленту
+              return;
+            }
+            /* final run */
+            if (run == 2)
+            {
+              auto call = id(staircase).turn_off();
+              call.perform();
+              return;
+            }
+
+            if (i < stepsCount && run < 2)
+            {
+              if (run == 0)
+              {
+                it.range(id(gStepFirstLed)[i], id(gStepLastLed)[i]) = current_color;
+              }
+              else
+              {
+                it.range(id(gStepFirstLed)[i], id(gStepLastLed)[i]) = Color::BLACK;
+              }
+              
+              i += 1;
+              if (i == stepsCount)
+              {
+                i = 0;
+                run += 1;
+              }
+            }
+      - addressable_lambda:
+          name: "Steps up to down"
+          update_interval: 400ms
+          lambda: |-
+            static uint16_t stepsCount = 0;
+            static uint16_t i = 0;
+            static uint16_t run = 0;
+            
+            if (initial_run)
+            {
+              stepsCount = sizeof(id(gStepFirstLed)) / sizeof(id(gStepFirstLed)[0]);
+              i = stepsCount;
+              run = 0;
+              it.all() = Color::BLACK;
+              return;
+            }
+            /* final run */
+            if (run == 2) 
+            {
+              auto call = id(staircase).turn_off();
+              call.perform();
+              return;
+            }
+
+            if (i > 0 && run < 2)
+            {
+              if (run == 0)
+              {
+                it.range(id(gStepFirstLed)[i-1], id(gStepLastLed)[i-1]) = current_color;
+              }
+              else
+              {
+                it.range(id(gStepFirstLed)[i-1], id(gStepLastLed)[i-1]) = Color::BLACK;
+              }
+              
+              i -= 1;
+              if (i == 0)
+              {
+                i = stepsCount;
+                run += 1;
+              }
+            }
+            
+switch:
+  - platform: template
+    name: "down2up"
+    turn_on_action:
+      - light.turn_on:
+          id: staircase
+          #brightness: 100%
+          effect: "Steps down to up"
+    turn_off_action:
+      - light.turn_off: staircase
+
+  - platform: template
+    name: "up2down"
+    turn_on_action:
+      - light.turn_on:
+          id: staircase
+          #brightness: 100%
+          effect: "Steps up to down"
+    turn_off_action:
+      - light.turn_off: staircase
