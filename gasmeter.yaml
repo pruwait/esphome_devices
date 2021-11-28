@@ -2,14 +2,23 @@
 #коричневый ------------ GND
 #зеленый    --+-- 10k -- VCC
 #.            |
-#.            +--------- GPIO14 ESP8266
+#.            +--------- GPIO14 (D5) ESP8266
+# WeMos D1 ESP-Wroom-02 ESP8266 Nodemcu WiFi Module With 18650 Battery Charging
 
 
 
 esphome:
   name: gas-bk-g4t
   platform: ESP8266
-  board: nodemcuv2
+  board: esp_wroom_02
+#  on_boot:
+#    priority: 600
+    # ...
+#    then:
+#      - number.set:
+#          id: gas_counter_set
+#          value: 555
+
 
 # Enable logging
 logger:
@@ -18,16 +27,23 @@ logger:
 
 # Enable Home Assistant API
 api:
+  services:
+# для устаноки начального значения счетчика
+  - service: set_gas
+    variables:
+        curr_count: int
+    then:
+      - pulse_meter.set_total_pulses:
+          id: gas_pulse_meter
+          value: !lambda return curr_count;
+
 
 ota:
 
-# Set statul led for Wemos D1 mini
-status_led:
-  pin: GPIO2
 
 wifi:
-  ssid: "mynet"
-  password: "mypass"
+  ssid: !secret wifi_ssid
+  password:  !secret wifi_password
 
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
@@ -50,27 +66,37 @@ binary_sensor:
         input: true
         pullup: true
       inverted: true
-    name: Gerkon
+    name: "Gerkon"
 
 sensor:
-  - platform: pulse_counter
+#  - platform: pulse_counter
+  - platform: pulse_meter
     pin: 
       number: GPIO14
       mode:
         input: true
         pullup: true
       inverted: true
-    name: Pulse meter
+    name: "Pulse meter"
+    id: gas_pulse_meter
+    internal: true
     internal_filter: 100us
-    filters:
-      - debounce: 5s
 
     unit_of_measurement: "pulse/min"
-    icon: 'mdi:fire'
+    icon: 'mdi:pulse'
 
     total:
-      unit_of_measurement: 'm³'
-      name: Gas Volume
+      unit_of_measurement: m³
+      name: "Gas Volume"
+      device_class: gas
+      state_class: total_increasing
       accuracy_decimals: 2
+      icon: 'mdi:fire'
       filters:
         - multiply: 0.01  # (1000 pulses per kWh)
+    
+
+   
+
+
+ 
