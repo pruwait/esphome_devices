@@ -1,28 +1,27 @@
 # снятие показаний со счетчика через датчик импульсов IN-Z61
 #коричневый ------------ GND
-#зеленый    --+-- 10k -- VCC
+#зеленый    --+-- 10k -- VCC 3v3
 #.            |
 #.            +--------- GPIO14 (D5) ESP8266
 # WeMos D1 ESP-Wroom-02 ESP8266 Nodemcu WiFi Module With 18650 Battery Charging
+
+substitutions:
+  pulse_pin: GPIO14
 
 
 
 esphome:
   name: gas-bk-g4t
-  platform: ESP8266
+  platform: esp8266
   board: esp_wroom_02
-#  on_boot:
-#    priority: 600
-    # ...
-#    then:
-#      - number.set:
-#          id: gas_counter_set
-#          value: 555
 
+
+# включаем отладку для поиска причины перезагрузки через лог
+debug:
 
 # Enable logging
 logger:
-
+  level: debug
 
 
 # Enable Home Assistant API
@@ -36,6 +35,7 @@ api:
       - pulse_meter.set_total_pulses:
           id: gas_pulse_meter
           value: !lambda return curr_count;
+  reboot_timeout: 0s # иначе перезагружается при отключении от hassio        
 
 
 ota:
@@ -49,7 +49,7 @@ wifi:
   ap:
     ssid: "GAS-BK-G4T Fallback Hotspot"
     password: "88888888"
-
+  reboot_timeout: 0s # иначе перезагружается при потере wifi
 captive_portal:
 
 
@@ -57,22 +57,28 @@ captive_portal:
 web_server:
   port: 80
 
+#time:
+#  - platform: sntp
+#    id: sntp_time
+#    timezone: "Europe/Moscow"
 
 binary_sensor:
   - platform: gpio
     pin:
-      number: GPIO14
+#      number: GPIO14
+      number: ${pulse_pin}
       mode:
         input: true
-        pullup: true
+        pullup: true # плохо работает, подтянул дополнительно к 3v3 через 15k
       inverted: true
     name: "Gerkon"
+    internal: true
 
 sensor:
 #  - platform: pulse_counter
   - platform: pulse_meter
     pin: 
-      number: GPIO14
+      number: ${pulse_pin}
       mode:
         input: true
         pullup: true
@@ -80,8 +86,10 @@ sensor:
     name: "Pulse meter"
     id: gas_pulse_meter
     internal: true
-    internal_filter: 100us
-
+# Отбрасываем короткие импульсы. При 5м3/ч должно быть 500 импульсов за 3600 секунд. Это более 7 секунд на импульс с максимальным расходом газа.
+    internal_filter: 7s
+#    filters:
+#      - debounce: 2s
     unit_of_measurement: "pulse/min"
     icon: 'mdi:pulse'
 
@@ -93,10 +101,36 @@ sensor:
       accuracy_decimals: 2
       icon: 'mdi:fire'
       filters:
-        - multiply: 0.01  # (1000 pulses per kWh)
+        - multiply: 0.01  # (100 pulses per m3)
+        
+        
+# для отслеживания времени работы esp
+  - platform: uptime
+    name: Uptime Sensor
+    id: uptime_sensor
+    update_interval: 60s
+    internal: true
+    on_raw_value:
+      then:
+        - text_sensor.template.publish:
+            id: uptime_human
+            state: !lambda |-
+              int seconds = round(id(uptime_sensor).raw_state);
+              int days = seconds / (24 * 3600);
+              seconds = seconds % (24 * 3600);
+              int hours = seconds / 3600;
+              seconds = seconds % 3600;
+              int minutes = seconds /  60;
+              seconds = seconds % 60;
+              return (
+                (days ? to_string(days) + "d " : "") +
+                (hours ? to_string(hours) + "h " : "") +
+                (minutes ? to_string(minutes) + "m " : "") +
+                (to_string(seconds) + "s")
+              ).c_str();        
     
-
-   
-
-
- 
+text_sensor:
+  - platform: template
+    name: Uptime Human Readable
+    id: uptime_human
+    icon: mdi:clock-start
