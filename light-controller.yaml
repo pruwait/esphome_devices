@@ -1,0 +1,2619 @@
+# Управление освещением
+# Обработка press, click, long press, long click, double click от выключателей
+
+
+#  В ESP32 для Wire по умолчанию использованы пины:
+#  SDA (default is GPIO 21)
+#  SCL (default is GPIO 22)
+#  Эти же пины использует eth, поэтому придется соединить PCF8575 с Wire2
+#  Иначе сеть отваливается
+
+# для Wire2
+#define SDA_2 5
+#define SCL_2 17
+
+
+#  Как выход, pcf может нормально работать только с LOW LEVEL TGIGGER!!!
+
+
+
+#   PCF8575(1,2)    ----- Esp32
+#   A0              ----- GRD
+#   A1              ----- GRD
+#   A2              ----- GRD
+#   VSS             ----- GRD
+#   VDD             ----- 5V/3.3V
+#   SDA             ----- IO5_RXD
+#   SCL             ----- IO17_TXD
+#   INT1            ----- 32 (CFG)
+#   INT2            ----- 33 (485_EN)
+#   INT3            ----- 39 (Input only)
+
+#   P0     ----------------- SW0
+#   P1     ----------------- SW1
+#   P2     ----------------- SW2
+#   P3     ----------------- SW3
+#   P4     ----------------- SW4
+#   P5     ----------------- SW5
+#   P6     ----------------- SW6
+#   P7     ----------------- SW7
+
+
+
+#  Выбор адреса
+#  A0 A1 A2 ID
+#  -  -  -  0x20
+#  +  -  -  0x21
+#  -  +  -  0x22
+#  +  +  -  0x23
+#  -  -  +  0x24
+#  +  -  +  0x25
+#  -  +  +  0x26
+#  +  +  +  0x27
+
+
+
+
+#   (from figure 4 datasheet
+#  Place a pull up resistor 4K7 between pin and 5V
+#  Place a capacitor 10-400pF between pin and GND
+#  Для всех входов обязательны подтягивающие резисторы, иначе происходит ложное срабатывание
+
+
+#   Прошивка WT32-ETH01 через FTDI 232 UART
+#   WT32-ETH01             FTDI 232
+#   5V                      5V
+#   GND                     GND
+#   Tx                      Rx
+#   Rx                      Tx
+#   En                      RTS
+#   GPIO0                   DTR
+
+
+
+substitutions:
+  device_name: "light-controller"
+
+esphome:
+  name: ${device_name}
+  platform: ESP32
+  board: esp-wrover-kit
+
+
+ethernet:
+  type: LAN8720
+  mdc_pin: GPIO23
+  mdio_pin: GPIO18
+  clk_mode: GPIO0_IN
+  phy_addr: 1
+  power_pin: GPIO16
+
+
+# Enable logging
+logger:
+#  level: VERBOSE
+
+# Enable Home Assistant API
+api:
+#  reboot_timeout: 0s # иначе перезагружается при отключении от hassio 
+
+ota:
+
+#web_server:
+#  port: 80
+  
+# шина Wire2
+i2c:
+  sda: 5
+  scl: 17
+  scan: true
+  frequency: 400kHz # на низкой частоте i2c несколько подключенных расширителей портов мешают работе api hassio
+  id: bus_b  
+  
+#define In1 0x20
+#define In2 0x21
+#define In3 0x27
+#define Out1 0x22
+#define Out2 0x24
+#define Out3 0x26  
+  
+# расширители портов  
+pcf8574:
+  - id: 'In1'
+    address: 0x20
+#    address: 0x28
+    pcf8575: true
+    i2c_id: bus_b
+    
+  - id: 'In2'
+    address: 0x21
+    pcf8575: true
+    i2c_id: bus_b
+    
+  - id: 'In3'
+    address: 0x27
+    pcf8575: true
+    i2c_id: bus_b
+    
+  - id: 'Out1'
+    address: 0x22
+#    address: 0x20
+    pcf8575: true
+    i2c_id: bus_b    
+
+  - id: 'Out2'
+    address: 0x24
+    pcf8575: true
+    i2c_id: bus_b    
+
+  - id: 'Out3'
+    address: 0x26
+    pcf8575: true
+    i2c_id: bus_b    
+
+
+
+
+#  управление реле
+output:
+  - platform: gpio
+    id: "r01"
+    pin:
+      pcf8574: Out1
+      number: 0
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r02"
+    pin:
+      pcf8574: Out1
+      number: 1
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r03"
+    pin:
+      pcf8574: Out1
+      number: 2
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r04"
+    pin:
+      pcf8574: Out1
+      number: 3
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r05"
+    pin:
+      pcf8574: Out1
+      number: 4
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r06"
+    pin:
+      pcf8574: Out1
+      number: 5
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r07"
+    pin:
+      pcf8574: Out1
+      number: 6
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r08"
+    pin:
+      pcf8574: Out1
+      number: 7
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r09"
+    pin:
+      pcf8574: Out1
+      number: 8
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r10"
+    pin:
+      pcf8574: Out1
+      number: 9
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r11"
+    pin:
+      pcf8574: Out1
+      number: 10
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r12"
+    pin:
+      pcf8574: Out1
+      number: 11
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r13"
+    pin:
+      pcf8574: Out1
+      number: 12
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r14"
+    pin:
+      pcf8574: Out1
+      number: 13
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r15"
+    pin:
+      pcf8574: Out1
+      number: 14
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r16"
+    pin:
+      pcf8574: Out1
+      number: 15
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r17"
+    pin:
+      pcf8574: Out2
+      number: 0
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r18"
+    pin:
+      pcf8574: Out2
+      number: 1
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r19"
+    pin:
+      pcf8574: Out2
+      number: 2
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r20"
+    pin:
+      pcf8574: Out2
+      number: 3
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r21"
+    pin:
+      pcf8574: Out2
+      number: 4
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r22"
+    pin:
+      pcf8574: Out2
+      number: 5
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r23"
+    pin:
+      pcf8574: Out2
+      number: 6
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r24"
+    pin:
+      pcf8574: Out2
+      number: 7
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r25"
+    pin:
+      pcf8574: Out2
+      number: 8
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r26"
+    pin:
+      pcf8574: Out2
+      number: 9
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r27"
+    pin:
+      pcf8574: Out2
+      number: 10
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r28"
+    pin:
+      pcf8574: Out2
+      number: 11
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r29"
+    pin:
+      pcf8574: Out2
+      number: 12
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r30"
+    pin:
+      pcf8574: Out2
+      number: 13
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r31"
+    pin:
+      pcf8574: Out2
+      number: 14
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r32"
+    pin:
+      pcf8574: Out2
+      number: 15
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r33"
+    pin:
+      pcf8574: Out3
+      number: 0
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r34"
+    pin:
+      pcf8574: Out3
+      number: 1
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r35"
+    pin:
+      pcf8574: Out3
+      number: 2
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r36"
+    pin:
+      pcf8574: Out3
+      number: 3
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r37"
+    pin:
+      pcf8574: Out3
+      number: 4
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r38"
+    pin:
+      pcf8574: Out3
+      number: 5
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r39"
+    pin:
+      pcf8574: Out3
+      number: 6
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r40"
+    pin:
+      pcf8574: Out3
+      number: 7
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r41"
+    pin:
+      pcf8574: Out3
+      number: 8
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r42"
+    pin:
+      pcf8574: Out3
+      number: 9
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r43"
+    pin:
+      pcf8574: Out3
+      number: 10
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r44"
+    pin:
+      pcf8574: Out3
+      number: 11
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r45"
+    pin:
+      pcf8574: Out3
+      number: 12
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r46"
+    pin:
+      pcf8574: Out3
+      number: 13
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r47"
+    pin:
+      pcf8574: Out3
+      number: 14
+      mode:
+        output: true
+      inverted: true
+  - platform: gpio
+    id: "r48"
+    pin:
+      pcf8574: Out3
+      number: 15
+      mode:
+        output: true
+      inverted: true
+
+
+# лампы
+
+light:
+  - platform: binary
+    name: "Kitchen1"
+    id: "lamp01"
+    output: "r01"
+  - platform: binary
+    id: "lamp02"
+    name: "Kitchen2"
+    output: "r02"
+  - platform: binary
+    id: "lamp03"
+    name: "Kitchen3"
+    output: "r03"
+  - platform: binary
+    id: "lamp04"
+    name: "WC1.1"
+    output: "r04"
+  - platform: binary
+    id: "lamp05"
+    name: "WC1.2"
+    output: "r05"
+  - platform: binary    
+    id: "lamp06"
+    name: "Shower Room1"
+    output: "r06"   
+  - platform: binary
+    id: "lamp07"
+    name: "Shower Room2"
+    output: "r07"
+  - platform: binary
+    id: "lamp08"
+    name: "Shower Room3"
+    output: "r08"
+  - platform: binary
+    id: "lamp09"
+    name: "Boiler Room"
+    output: "r09"
+  - platform: binary
+    id: "lamp10"
+    name: "Storeroom"
+    output: "r10"    
+  - platform: binary
+    id: "lamp11"
+    name: "Сorridor1.1"
+    output: "r11"
+  - platform: binary
+    id: "lamp12"
+    name: "Сorridor1.2"
+    output: "r12"
+  - platform: binary
+    id: "lamp13"
+    name: "Сorridor1.3"
+    output: "r13"
+  - platform: binary
+    id: "lamp14"
+    name: "Basement"
+    output: "r14"
+  - platform: binary
+    id: "lamp15"
+    name: "Lobby"
+    output: "r15"
+  - platform: binary
+    id: "lamp16"
+    name: "Hall1"
+    output: "r16"   
+  - platform: binary
+    id: "lamp17"
+    name: "Hall2"
+    output: "r17"
+  - platform: binary
+    id: "lamp18"
+    name: "Hall3"
+    output: "r18"
+  - platform: binary
+    id: "lamp19"
+    name: "Canopy"
+    output: "r19"
+  - platform: binary
+    id: "lamp20"
+    name: "Balcony"
+    output: "r20"    
+  - platform: binary
+    id: "lamp21"
+    name: "Bathroom1"
+    output: "r21"
+  - platform: binary
+    id: "lamp22"
+    name: "Tanya1"
+    output: "r22"
+  - platform: binary
+    id: "lamp23"
+    name: "Tanya2"
+    output: "r23"
+  - platform: binary
+    id: "lamp24"
+    name: "WC2.1"
+    output: "r24"
+  - platform: binary
+    id: "lamp25"
+    name: "WC2.2"
+    output: "r25"
+  - platform: binary
+    id: "lamp26"
+    name: "Bedroom1"
+    output: "r26"   
+  - platform: binary
+    id: "lamp27"
+    name: "Wardrobe"
+    output: "r27"
+  - platform: binary
+    id: "lamp28"
+    name: "Bedroom2"
+    output: "r28"
+  - platform: binary
+    id: "lamp29"
+    name: "Loft1"
+    output: "r29"
+  - platform: binary
+    id: "lamp30"
+    name: "Loft2"
+    output: "r30"    
+  - platform: binary
+    id: "lamp31"
+    name: "Kirill1"
+    output: "r31"
+  - platform: binary
+    id: "lamp32"
+    name: "Kirill2"
+    output: "r32"
+  - platform: binary
+    id: "lamp33"
+    name: "Kirill3"
+    output: "r33"
+  - platform: binary
+    id: "lamp34"
+    name: "Bedside Lamp1"
+    output: "r34"
+  - platform: binary
+    id: "lamp35"
+    name: "Bathroom3"
+    output: "r35"
+  - platform: binary
+    id: "lamp36"
+    name: "Poll"
+    output: "r36"   
+  - platform: binary
+    id: "lamp37"
+    name: "Corridor2.1"
+    output: "r37"
+  - platform: binary
+    id: "lamp38"
+    name: "Corridor2.2"
+    output: "r38"
+  - platform: binary
+    id: "lamp39"
+    name: "Bathroom2"
+    output: "r39"
+  - platform: binary
+    id: "lamp40"
+    name: "Bedside Lamp2"
+    output: "r40" 
+  - platform: binary
+    id: "lamp41"
+    name: "lamp41"
+    output: "r41"
+  - platform: binary
+    id: "lamp42"
+    name: "lamp42"
+    output: "r42"
+  - platform: binary
+    id: "lamp43"
+    name: "lamp43"
+    output: "r43"
+  - platform: binary
+    id: "lamp44"
+    name: "lamp44"
+    output: "r44"
+  - platform: binary
+    id: "lamp45"
+    name: "lamp45"
+    output: "r45"
+  - platform: binary
+    id: "lamp46"
+    name: "lamp46"
+    output: "r46"   
+  - platform: binary
+    id: "lamp47"
+    name: "lamp47"
+    output: "r47"
+  - platform: binary
+    id: "lamp48"
+    name: "lamp48"
+    output: "r48"
+  
+    
+# Кнопки выключателей      
+############################# In1 ##############################
+binary_sensor:    
+
+  - platform: gpio
+    internal: true
+    name: "sw01"
+    pin:
+      pcf8574: In1
+      number: 0
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp01"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw02"
+    pin:
+      pcf8574: In1
+      number: 1
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp02"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw03"
+    pin:
+      pcf8574: In1
+      number: 2
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp03"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw04"
+    pin:
+      pcf8574: In1
+      number: 3
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp04"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw05"
+    pin:
+      pcf8574: In1
+      number: 4
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp05"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw06"
+    pin:
+      pcf8574: In1
+      number: 5
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp06"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw07"
+    pin:
+      pcf8574: In1
+      number: 6
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp07"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw08"
+    pin:
+      pcf8574: In1
+      number: 7
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp08"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw09"
+    pin:
+      pcf8574: In1
+      number: 8
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp09"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw10"
+    pin:
+      pcf8574: In1
+      number: 9
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp10"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw11"
+    pin:
+      pcf8574: In1
+      number: 10
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp11"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw12"
+    pin:
+      pcf8574: In1
+      number: 10
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp12"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw13"
+    pin:
+      pcf8574: In1
+      number: 12
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp13"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw14"
+    pin:
+      pcf8574: In1
+      number: 13
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp14"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw15"
+    pin:
+      pcf8574: In1
+      number: 14
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp15"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw16"
+    pin:
+      pcf8574: In1
+      number: 15
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp16"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+####################### In2 #################################
+
+
+  - platform: gpio
+    internal: true
+    name: "sw17"
+    pin:
+      pcf8574: In2
+      number: 0
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp17"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw18"
+    pin:
+      pcf8574: In2
+      number: 1
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp18"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw19"
+    pin:
+      pcf8574: In2
+      number: 2
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp19"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw20"
+    pin:
+      pcf8574: In2
+      number: 3
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp20"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw21"
+    pin:
+      pcf8574: In2
+      number: 4
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp21"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw22"
+    pin:
+      pcf8574: In2
+      number: 5
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp22"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw23"
+    pin:
+      pcf8574: In2
+      number: 6
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp23"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw24"
+    pin:
+      pcf8574: In2
+      number: 7
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp24"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw25"
+    pin:
+      pcf8574: In2
+      number: 8
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp25"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw26"
+    pin:
+      pcf8574: In2
+      number: 9
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp26"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw27"
+    pin:
+      pcf8574: In2
+      number: 10
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp27"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw28"
+    pin:
+      pcf8574: In2
+      number: 10
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp28"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw29"
+    pin:
+      pcf8574: In2
+      number: 12
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp29"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw30"
+    pin:
+      pcf8574: In2
+      number: 13
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp30"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw31"
+    pin:
+      pcf8574: In2
+      number: 14
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp31"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw32"
+    pin:
+      pcf8574: In2
+      number: 15
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp32"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+
+####################################### In3 ###################################
+
+
+  - platform: gpio
+    internal: true
+    name: "sw33"
+    pin:
+      pcf8574: In3
+      number: 0
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp33"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw34"
+    pin:
+      pcf8574: In3
+      number: 1
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+#    on_press:
+#      then:
+#        - logger.log: "Pressed"
+#        - light.toggle: "lamp34"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+    - timing:
+      - ON for at least 1.5s
+      then:
+#        - logger.log: "Long Pressed"
+         - button.press: turn_off_all
+    - timing:
+      - ON for at most 0.3s
+      - OFF for at least 0.2s
+      then:
+#        - logger.log: "Short Clicked"
+        - light.toggle: "lamp34"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw35"
+    pin:
+      pcf8574: In3
+      number: 2
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp35"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw36"
+    pin:
+      pcf8574: In3
+      number: 3
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp36"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw37"
+    pin:
+      pcf8574: In3
+      number: 4
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp37"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw38"
+    pin:
+      pcf8574: In3
+      number: 5
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp38"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw39"
+    pin:
+      pcf8574: In3
+      number: 6
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp39"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw40"
+    pin:
+      pcf8574: In3
+      number: 7
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+#    on_press:
+#      then:
+#        - logger.log: "Pressed"
+#        - light.toggle: "lamp40"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+    - timing:
+      - ON for at least 1.5s
+      then:
+#        - logger.log: "Long Pressed"
+         - button.press: turn_off_all
+    - timing:
+      - ON for at most 0.3s
+      - OFF for at least 0.2s
+      then:
+#        - logger.log: "Short Clicked"
+         - light.toggle: "lamp40"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw41"
+    pin:
+      pcf8574: In3
+      number: 8
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp41"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw42"
+    pin:
+      pcf8574: In3
+      number: 9
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp42"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw43"
+    pin:
+      pcf8574: In3
+      number: 10
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp43"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw44"
+    pin:
+      pcf8574: In3
+      number: 10
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp44"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw45"
+    pin:
+      pcf8574: In3
+      number: 12
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp45"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw46"
+    pin:
+      pcf8574: In3
+      number: 13
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp46"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw47"
+    pin:
+      pcf8574: In3
+      number: 14
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp47"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+  - platform: gpio
+    internal: true
+    name: "sw48"
+    pin:
+      pcf8574: In3
+      number: 15
+      inverted: true
+      mode:
+        input: true
+# Обработка пресс      
+    on_press:
+      then:
+#        - logger.log: "Pressed"
+        - light.toggle: "lamp48"
+
+# Ниже шаблон для обработки клик, даблклик и логнпресс.
+#    on_multi_click:
+     
+#    - timing:
+#      - ON for at most 1s
+#      - OFF for at most 0.5s
+#      - ON for 0.1s to 1s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Double Clicked"
+#    - timing:
+#      - ON for at least 1.5s
+
+#      then:
+#        - logger.log: "Long Pressed"
+#    - timing:
+#      - ON for at most 0.3s
+#      - OFF for at least 0.2s
+#      then:
+#        - logger.log: "Short Clicked"
+# Выше шаблон для обработки клик, даблклик и логнпресс. 
+        
+        
+        
+# для отслеживания времени работы esp
+sensor:
+  - platform: uptime
+    name: Uptime Sensor
+    id: uptime_sensor
+    update_interval: 60s
+    internal: true
+    on_raw_value:
+      then:
+        - text_sensor.template.publish:
+            id: uptime_human
+            state: !lambda |-
+              int seconds = round(id(uptime_sensor).raw_state);
+              int days = seconds / (24 * 3600);
+              seconds = seconds % (24 * 3600);
+              int hours = seconds / 3600;
+              seconds = seconds % 3600;
+              int minutes = seconds /  60;
+              seconds = seconds % 60;
+              return (
+                (days ? to_string(days) + "d " : "") +
+                (hours ? to_string(hours) + "h " : "") +
+                (minutes ? to_string(minutes) + "m " : "") +
+                (to_string(seconds) + "s")
+              ).c_str();        
+    
+text_sensor:
+  - platform: template
+    name: Uptime Light Controller
+    id: uptime_human
+    icon: mdi:clock-start  
+    
+button:
+  - platform: template
+    name: "Выключить весь свет"
+    id: turn_off_all
+    icon: "mdi:lightbulb-group-off"
+    on_press:
+#      - logger.log: Button Pressed 
+      - light.turn_off: "lamp01"
+      - light.turn_off: "lamp02"
+      - light.turn_off: "lamp03"
+      - light.turn_off: "lamp04"
+      - light.turn_off: "lamp05"
+      - light.turn_off: "lamp06"
+      - light.turn_off: "lamp07"
+      - light.turn_off: "lamp08"
+      - light.turn_off: "lamp09"      
+      - light.turn_off: "lamp10"
+      - light.turn_off: "lamp11"
+      - light.turn_off: "lamp12"
+      - light.turn_off: "lamp13"
+      - light.turn_off: "lamp14"
+      - light.turn_off: "lamp15"
+      - light.turn_off: "lamp16"
+      - light.turn_off: "lamp17"
+      - light.turn_off: "lamp18"      
+      - light.turn_off: "lamp19"
+      - light.turn_off: "lamp20"
+      - light.turn_off: "lamp21"
+      - light.turn_off: "lamp22"
+      - light.turn_off: "lamp23"
+      - light.turn_off: "lamp24"
+      - light.turn_off: "lamp25"
+      - light.turn_off: "lamp26"
+      - light.turn_off: "lamp27"      
+      - light.turn_off: "lamp28"
+      - light.turn_off: "lamp29"
+      - light.turn_off: "lamp30"
+      - light.turn_off: "lamp31"
+      - light.turn_off: "lamp32"
+      - light.turn_off: "lamp33"
+      - light.turn_off: "lamp34"
+      - light.turn_off: "lamp35"
+      - light.turn_off: "lamp36"      
+      - light.turn_off: "lamp37"
+      - light.turn_off: "lamp38"
+      - light.turn_off: "lamp39"
+      - light.turn_off: "lamp40"
+      - light.turn_off: "lamp41"
+      - light.turn_off: "lamp42"
+      - light.turn_off: "lamp43"
+      - light.turn_off: "lamp44"
+      - light.turn_off: "lamp45"
+      - light.turn_off: "lamp46"
+      - light.turn_off: "lamp47"
+      - light.turn_off: "lamp48"
